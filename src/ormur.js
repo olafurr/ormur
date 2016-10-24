@@ -199,8 +199,8 @@ module.exports = knex => {
                 _join('table', {} || Function) - table same as alias select all columns and execute options
 
                 _join('table', 'alias', []) - table different from alias and select specified
-                _join('table', 'alias', {} || Function) - table different from alias and select specified
-                _join('table', [], {} || Function) - table different from alias and select specified
+                _join('table', 'alias', {} || Function) - table different from alias and select all columns and execute options
+                _join('table', [], {} || Function) - table different from alias, select specified and execute options
             */
 
             // _join('table') - table same as alias and select all columns
@@ -227,17 +227,17 @@ module.exports = knex => {
             }
 
             // _join('table', 'alias', []) - table different from alias and select specified
-            // _join('table', 'alias', {} || Function) - table different from alias and select specified
-            // _join('table', [], {} || Function) - table different from alias and select specified
+            // _join('table', 'alias', {} || Function) - table different from alias, select all and execute options
+            // _join('table', [], {} || Function) - table different from alias, select specified and execute options
             else if (argCount === 4) {
-                // _join('table', 'alias', {} || Function) - table different from alias and select specified
+                // _join('table', 'alias', {} || Function) - table different from alias, select all and execute options
                 if (typeof alias === 'string') {
                     if (isObject(attrs) || typeof attrs === 'function') {
                         opt = attrs;
                         attrs = null;
                     }
                 }
-                // _join('table', [], {} || Function) - table different from alias and select specified
+                // _join('table', [], {} || Function) - table different from alias, select specified and execute options
                 else if (Array.isArray(alias)) {
                     opt = attrs;
                     attrs = alias;
