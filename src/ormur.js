@@ -247,8 +247,9 @@ module.exports = knex => {
                 _join('joinTableName', {} || Function) - joinTableName same as alias select all columns and execute options
 
                 _join('joinTableName', 'alias', []) - joinTableName different from alias and select specified
-                _join('joinTableName', 'alias', {} || Function) - joinTableName different from alias and select specified
-                _join('joinTableName', [], {} || Function) - joinTableName different from alias and select specified
+                _join('joinTableName', 'alias', {} || Function) - joinTableName different from alias and select all columns and execute options
+                _join('joinTableName', [], {} || Function) - joinTableName different from alias, select specified and execute options
+
             */
 
             // _join('joinTableName') - joinTableName same as alias and select all columns
@@ -274,6 +275,7 @@ module.exports = knex => {
                 }
             }
 
+
             // _join('joinTableName', 'alias', []) - joinTableName different from alias and select specified
             // _join('joinTableName', 'alias', {} || Function) - joinTableName different from alias and select specified
             // _join('joinTableName', [], {} || Function) - joinTableName different from alias and select specified
@@ -284,9 +286,7 @@ module.exports = knex => {
                         opt = attrs;
                         attrs = null;
                     }
-                }
-                // _join('joinTableName', [], {} || Function) - joinTableName different from alias and select specified
-                else if (Array.isArray(alias)) {
+                } else if (Array.isArray(alias)) {
                     opt = attrs;
                     attrs = alias;
                     alias = joinTableName;
