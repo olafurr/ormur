@@ -1,5 +1,7 @@
 'use strict';
 
+const inherits = require('util').inherits;
+
 const isObject = o => o === Object(o) && !Array.isArray(o);
 
 module.exports = knex => {
@@ -18,6 +20,17 @@ module.exports = knex => {
             this.parentModel = parentModel || '';
             this.selectFields = [];
             this.query = query || null;
+            this._alias = null;
+
+            const self = this;
+
+            ['where', 'orderBy', 'limit'].forEach(fn => {
+                this[fn] = function() {
+                    self.query = self.query[fn].apply(self.query, arguments);
+                    return self;
+                }
+            });
+
         }
 
         static get primaryKey() {
@@ -28,8 +41,12 @@ module.exports = knex => {
             return '';
         }
 
-        static get alias() {
-            return this.tableName;
+        get alias() {
+            // if (!this._alias) {
+            //     return this.constructor.tableName;
+            // }
+
+            return this._alias;
         }
 
         static get columns() {
@@ -138,12 +155,59 @@ module.exports = knex => {
         }
 
         $from(fn) {
-            this.query.from(fn.bind(this));
+
+            const alias = this._alias || this.constructor.tableName;
+            const subQueryInstance = new this.constructor();
+
+            subQueryInstance._alias = alias
+
+            const subQuery = fn.call(subQueryInstance);
+
+            this.query.select(`${alias}.*`)
+
+            this.query.from(subQuery.query.clone().as(alias)).as('ignored_alias');
+
             return this;
         }
 
         $as(alias) {
-            this.query.as(alias);
+            this._alias = alias;
+            return this;
+        }
+
+        static $as(alias) {
+
+            const instance = new this();
+
+            instance._alias = alias;
+
+            instance.query = this.knex(`${this.tableName} as ${alias}`);
+            return instance;
+        }
+
+        $select() {
+            const args = Array.prototype.slice.call(arguments);
+
+            if (args.length === 0) {
+                this.
+                return this;
+            }
+
+            // Object.keys(this.query.prototype).forEach(i => console.log(i));
+            if (args.length === 0) {
+                args.push('*');
+            }
+
+            let columns = null;
+
+            if (args.length === 1 && args[0] === '*') {
+                columns = Object.keys(this.constructor.columns);
+            } else {
+                columns = args;
+            }
+
+            this._addSelectFields(columns, this.constructor.tableName, this._alias);
+
             return this;
         }
 
@@ -152,109 +216,93 @@ module.exports = knex => {
 
             const instance = new this();
 
-            const args = Array.prototype.slice.call(arguments);
-
-            if (args.length === 0) {
-                args.push('*');
-            }
-
-            let columns = null;
-
-            if (args.length === 1 && args[0] === '*') {
-                columns = Object.keys(instance.constructor.columns);
-            } else {
-                columns = args;
-            }
-
-            instance._addSelectFields(columns, this.tableName, this.alias);
-
-            return instance;
+            return instance.$select.apply(instance, arguments);
         }
 
         toKnex() {
             return this.query;
         }
 
-        _$join(joinType, table, alias, attrs, opt) {
+        _$join(joinType, joinTableName, alias, attrs, opt) {
 
             const args = Array.prototype.slice.call(arguments);
             const argCount = args.filter(a => typeof a !== 'undefined').length;
 
             if (argCount === 1) {
-                throw new Error('Table must be specied for the join');
+                throw new Error('joinTableName must be specied for the join');
             }
 
             /* 
                 DEBUGGING
 
-                table: <String> required,
+                joinTableName: <String> required,
                 alias: <String> optional,
                 attrs: <Array> optional,
                 opt: <Function || Object> optional
 
-                _join('table') - table same as alias and select all columns
+                _join('joinTableName') - joinTableName same as alias and select all columns
 
-                _join('table', 'alias') - table different from alias and select all columns
-                _join('table', []) - table same as alias and select specified columns
-                _join('table', {} || Function) - table same as alias select all columns and execute options
+                _join('joinTableName', 'alias') - joinTableName different from alias and select all columns
+                _join('joinTableName', []) - joinTableName same as alias and select specified columns
+                _join('joinTableName', {} || Function) - joinTableName same as alias select all columns and execute options
 
-                _join('table', 'alias', []) - table different from alias and select specified
-                _join('table', 'alias', {} || Function) - table different from alias and select specified
-                _join('table', [], {} || Function) - table different from alias and select specified
+                _join('joinTableName', 'alias', []) - joinTableName different from alias and select specified
+                _join('joinTableName', 'alias', {} || Function) - joinTableName different from alias and select specified
+                _join('joinTableName', [], {} || Function) - joinTableName different from alias and select specified
             */
 
-            // _join('table') - table same as alias and select all columns
+            // _join('joinTableName') - joinTableName same as alias and select all columns
             if (argCount === 2) {
-                alias = table;
+                alias = joinTableName;
             }
 
-            // _join('table', 'alias') - table different from alias and select all columns
-            // _join('table', []) - table same as alias and select specified columns
-            // _join('table', {} || Function) - table same as alias select all columns and execute options
+            // _join('joinTableName', 'alias') - joinTableName different from alias and select all columns
+            // _join('joinTableName', []) - joinTableName same as alias and select specified columns
+            // _join('joinTableName', {} || Function) - joinTableName same as alias select all columns and execute options
             else if (argCount === 3) {
 
-                // _join('table', []) - table same as alias and select specified columns
+                // _join('joinTableName', []) - joinTableName same as alias and select specified columns
                 if (Array.isArray(alias)) {
                     attrs = alias;
-                    alias = table;
+                    alias = joinTableName;
                 }
-                // _join('table', {} || Function) - table same as alias select all columns and execute options
+                // _join('joinTableName', {} || Function) - joinTableName same as alias select all columns and execute options
                 else if (isObject(alias) || typeof alias === 'function') {
                     opt = alias;
-                    alias = table;
+                    alias = joinTableName;
                     attrs = undefined;
                 }
             }
 
-            // _join('table', 'alias', []) - table different from alias and select specified
-            // _join('table', 'alias', {} || Function) - table different from alias and select specified
-            // _join('table', [], {} || Function) - table different from alias and select specified
+            // _join('joinTableName', 'alias', []) - joinTableName different from alias and select specified
+            // _join('joinTableName', 'alias', {} || Function) - joinTableName different from alias and select specified
+            // _join('joinTableName', [], {} || Function) - joinTableName different from alias and select specified
             else if (argCount === 4) {
-                // _join('table', 'alias', {} || Function) - table different from alias and select specified
+                // _join('joinTableName', 'alias', {} || Function) - joinTableName different from alias and select specified
                 if (typeof alias === 'string') {
                     if (isObject(attrs) || typeof attrs === 'function') {
                         opt = attrs;
                         attrs = null;
                     }
                 }
-                // _join('table', [], {} || Function) - table different from alias and select specified
+                // _join('joinTableName', [], {} || Function) - joinTableName different from alias and select specified
                 else if (Array.isArray(alias)) {
                     opt = attrs;
                     attrs = alias;
-                    alias = table;
+                    alias = joinTableName;
                 }
             }
 
 
 
-            const joinTable = this.constructor._models[table];
+            const joinTable = this.constructor._models[joinTableName];
 
-            const relations = this.getRelation(table, alias);
+            const relations = this.getRelation(joinTableName, alias);
 
 
             if (alias === '*') {
-                for (let alias in this.constructor.relations[table]) {
-                    this._$join(joinType, table, alias, attrs, opt);
+                for (let alias in this.constructor.relations[joinTableName]) {
+                    this._$join(joinType, joinTableName, alias, attrs, opt);
                 }
 
                 return this;
@@ -265,25 +313,33 @@ module.exports = knex => {
                 attrs = Object.keys(joinTable.columns);
             }
 
+            let parentAlias = null;
+
             if (this.parentModel !== '') {
                 alias = [this.parentModel, alias].join('.');
             }
 
-            this._addSelectFields(attrs, table, alias);
+            if (this.constructor.tableName === joinTableName) {
+                parentAlias = this.alias;
+            }
+
+            this._addSelectFields(attrs, joinTableName, alias);
 
             const self = this;
             const selfClass = self.constructor;
             const knex = this.constructor.knex;
 
-            this.query[joinType](`${table} as ${alias}`, function() {
+            // console.log(this.constructor.tableName, joinTableName, this.alias, alias)
+
+            this.query[joinType](`${joinTableName} as ${alias}`, function() {
                 // Join on primary/foreign key relationship
 
                 let join = null;
 
                 if (relations.type === relationTypes.belongsTo) {
-                    join = this.on(knex.raw(`"${self.parentModel || selfClass.tableName}"."${relations.foreignKey}"`), '=', knex.raw(`"${alias}"."${joinTable.primaryKey}"`));
+                    join = this.on(knex.raw(`"${(self.parentModel || self.alias) || selfClass.tableName}"."${relations.foreignKey}"`), '=', knex.raw(`"${alias}"."${joinTable.primaryKey}"`));
                 } else {
-                    join = this.on(knex.raw(`"${alias}"."${relations.foreignKey}"`), '=', knex.raw(`"${self.parentModel || selfClass.tableName}"."${joinTable.primaryKey}"`));
+                    join = this.on(knex.raw(`"${alias}"."${relations.foreignKey}"`), '=', knex.raw(`"${(self.parentModel || self.alias) || selfClass.tableName}"."${joinTable.primaryKey}"`));
                 }
 
                 if (isObject(opt)) {
@@ -324,6 +380,14 @@ module.exports = knex => {
             return this;
         }
 
+        toString() {
+            return this.query.toString()
+        }
+
+        _addSelectFieldsRaw(column) {
+            this.query.select(column);
+        }
+
         _addSelectFields(columns, tableName, alias) {
 
             if (!alias) {
@@ -346,7 +410,8 @@ module.exports = knex => {
                 );
 
             if (!this.query) {
-                this.query = knex(`${tableName} as ${alias}`).select(fields);
+                this.query = knex(`${tableName} as ${alias}`);
+                this.query.select(fields);
             } else {
                 this.query.select(fields);
             }
@@ -374,5 +439,4 @@ module.exports = knex => {
         BaseModel,
         import: _import
     };
-
 };
