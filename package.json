@@ -1,14 +1,14 @@
 {
   "name": "ormur",
- "version": "0.0.1",
-  "description": "",
+  "version": "0.0.1",
+  "description": "Very lightweight orm for javascript built on top of knex",
   "main": "index.js",
   "scripts": {
     "test": "mocha --compilers js:babel-core/register",
     "build": "rimraf ./lib && babel src --out-dir lib --copy-files"
   },
   "keywords": [],
-  "author": "",
+  "author": "Ólafur Ragnar Garðarsson <olafurlax@gmail.com>",
   "license": "ISC",
   "dependencies": {
     "knex": "^0.12.6",
