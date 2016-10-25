@@ -24,6 +24,10 @@ module.exports = knex => {
 			};
 		}
 
+		static get virtualAttributes() {
+			return {};
+		}
+
 		static hasOne(model, key, alias) {
 			this._addRelation(relationTypes.hasOne, model, key, alias);
 		}
@@ -128,12 +132,12 @@ module.exports = knex => {
 					});
 				}
 			} else if (args.length === 1 && args[0] === '*') {
-				selectColumns = columns
+				selectColumns = columns;
 			} else if (args.length > 1) {
 				selectColumns = args;
 			}
 
-			const query = knex(`${this.tableName} as ${alias}`)
+			const query = knex(`${this.tableName} as ${alias}`);
 
 			if (selectColumns) {
 				query.select(QueryBuilder.getRawSelectFields(selectColumns, columnAliases, alias, true));

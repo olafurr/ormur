@@ -40,8 +40,29 @@ class QueryBuilder {
 			return [];
 		}
 
-		return columns
-			.map(c => raw(`"${alias}".${c} as "${isTopLevel ? columnAliases[c] || c : [alias, columnAliases[c] || c].join('.')}"`));
+		return columns.map(c => {
+
+			let leftHand = null,
+				rightHand = null;
+
+			if (typeof c === 'function') {
+				const result = c(alias);
+
+				if (!Array.isArray(result) || result.length !== 2) {
+					throw new Error(`The result from virtual attributes must be an array with length 2`);
+				}
+
+				leftHand = result[0]
+
+				rightHand = isTopLevel ? result[1] : [alias, result[1]].join('.')
+			} else {
+				leftHand = `"${alias}".${c}`;
+				rightHand = isTopLevel ? columnAliases[c] || c : [alias, columnAliases[c] || c].join('.');
+			}
+
+
+			return raw(`${leftHand} as "${rightHand}"`);
+		});
 	}
 
 
@@ -106,6 +127,7 @@ class QueryBuilder {
 
 		// _join('joinTableName', 'alias') - joinTableName different from alias and select all columns
 		// _join('joinTableName', []) - joinTableName same as alias and select specified columns
+		// _join('joinTableName', {}) - joinTableName same as alias and attrs is an object
 		// _join('joinTableName', {} || Function) - joinTableName same as alias select all columns and execute options
 		else if (argCount === 3) {
 
@@ -115,7 +137,21 @@ class QueryBuilder {
 				alias = joinTableName;
 			}
 			// _join('joinTableName', {} || Function) - joinTableName same as alias select all columns and execute options
-			else if (isObject(alias) || typeof alias === 'function') {
+			else if (isObject(alias)) {
+
+				if ((alias['include'] && Array.isArray(alias.include)) ||
+					(alias['exclude'] && Array.isArray(alias.exclude))) {
+					attrs = alias;
+					alias = joinTableName;
+					opt = undefined;
+
+					// _join('joinTableName', 'alias', {} || Function) - joinTableName different from alias, select all attributes and execute options
+				} else {
+					opt = alias;
+					alias = joinTableName;
+					attrs = undefined;
+				}
+			} else if (typeof alias === 'function') {
 				opt = alias;
 				alias = joinTableName;
 				attrs = undefined;
@@ -123,17 +159,33 @@ class QueryBuilder {
 		}
 
 
-		// _join('joinTableName', 'alias', []) - joinTableName different from alias and select specified
-		// _join('joinTableName', 'alias', {} || Function) - joinTableName different from alias and select specified
+		// _join('joinTableName', 'alias', []) - joinTableName different from alias and select specified fields
+		// _join('joinTableName', 'alias', {}) - joinTableName different from alias and attrs is an object
+		// _join('joinTableName', 'alias', {} || Function) - joinTableName different from alias, select all attributes and execute options
+		// _join('joinTableName', {}, {} || Function) - joinTableName different from alias and select specified
 		// _join('joinTableName', [], {} || Function) - joinTableName different from alias and select specified
 		else if (argCount === 4) {
 			// _join('joinTableName', 'alias', {} || Function) - joinTableName different from alias and select specified
 			if (typeof alias === 'string') {
-				if (isObject(attrs) || typeof attrs === 'function') {
+
+				// _join('joinTableName', 'alias', {}) - joinTableName different from alias and attrs is an object
+				if (isObject(attrs)) {
+					if ((attrs['include'] && Array.isArray(attrs.include)) ||
+						(attrs['exclude'] && Array.isArray(attrs.exclude))) {
+						opt = undefined;
+
+						// _join('joinTableName', 'alias', {} || Function) - joinTableName different from alias, select all attributes and execute options
+					} else {
+						opt = attrs;
+						attrs = undefined;
+					}
+					// _join('joinTableName', 'alias', {} || Function) - joinTableName different from alias, select all attributes and execute options
+				} else if (typeof attrs === 'function') {
 					opt = attrs;
-					attrs = null;
+					attrs = undefined;
 				}
-			} else if (Array.isArray(alias)) {
+				// _join('joinTableName', [], {} || Function) - joinTableName different from alias and select specified
+			} else {
 				opt = attrs;
 				attrs = alias;
 				alias = joinTableName;
@@ -154,7 +206,7 @@ class QueryBuilder {
 		}
 
 		const joinTableColumns = Object.keys(joinTable.columns);
-		const selectColumns = null;
+		let selectColumns = null;
 		if (attrs === null || typeof attrs === 'undefined') {
 			selectColumns = joinTableColumns;
 		} else if (isObject(attrs)) {
