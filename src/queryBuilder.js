@@ -24,7 +24,7 @@ class QueryBuilder {
 		const self = this;
 
 		// Assign knex methods to the query builder
-		['where', 'orderBy', 'limit'].forEach(fn => {
+		['where', 'orderBy', 'limit', 'then', 'map'].forEach(fn => {
 			this[fn] = function() {
 				self.query = self.query[fn].apply(self.query, arguments);
 				return self;
