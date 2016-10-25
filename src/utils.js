@@ -1,5 +1,7 @@
 'use strict';
 
-const knex = require('knex');
+import {
+    isPlainObject
+} from 'lodash';
 
-exports.isObject = o => o === Object(o) && !Array.isArray(o);
+export const isObject = isPlainObject;

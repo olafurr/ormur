@@ -1,9 +1,10 @@
 'use strict';
 
-const utils = require('./utils');
-const isObject = utils.isObject;
+import {
+	isObject
+} from './utils';
 
-const relationTypes = require('./relationTypes');
+import relationTypes from './relationTypes';
 
 class QueryBuilder {
 
@@ -28,7 +29,7 @@ class QueryBuilder {
 			this[fn] = function() {
 				self.query = self.query[fn].apply(self.query, arguments);
 				return self;
-			}
+			};
 		});
 	}
 
@@ -52,9 +53,9 @@ class QueryBuilder {
 					throw new Error(`The result from virtual attributes must be an array with length 2`);
 				}
 
-				leftHand = result[0]
+				leftHand = result[0];
 
-				rightHand = isTopLevel ? result[1] : [alias, result[1]].join('.')
+				rightHand = isTopLevel ? result[1] : [alias, result[1]].join('.');
 			} else {
 				leftHand = `"${alias}".${c}`;
 				rightHand = isTopLevel ? columnAliases[c] || c : [alias, columnAliases[c] || c].join('.');
@@ -76,7 +77,7 @@ class QueryBuilder {
 		const alias = this.tableAlias;
 		const subQuery = fn.call(this.constructor._models[this.tableName].$as(alias));
 
-		this.query.select(`${this.tableAlias}.*`)
+		this.query.select(`${this.tableAlias}.*`);
 
 		this.query.from(subQuery.query.clone().as(this.tableAlias)).as('ignored_alias');
 
@@ -109,13 +110,12 @@ class QueryBuilder {
 		return this._$join('innerJoin', table, alias, attrs, opt);
 	}
 
-	_$join(joinType, joinTableName, alias, attrs, opt) {
-
+	_parseJoinArguments(joinType, joinTableName, alias, attrs, opt) {
 		const args = Array.prototype.slice.call(arguments);
 		const argCount = args.filter(a => typeof a !== 'undefined').length;
 
-		if (argCount === 1) {
-			throw new Error('joinTableName must be specied for the join');
+		if (argCount < 2) {
+			throw new Error('joinTableName and joinType must be specied for the join');
 		}
 
 		// Almost all arguments optional... God help us
@@ -139,8 +139,8 @@ class QueryBuilder {
 			// _join('joinTableName', {} || Function) - joinTableName same as alias select all columns and execute options
 			else if (isObject(alias)) {
 
-				if ((alias['include'] && Array.isArray(alias.include)) ||
-					(alias['exclude'] && Array.isArray(alias.exclude))) {
+				if ((alias.include && Array.isArray(alias.include)) ||
+					(alias.exclude && Array.isArray(alias.exclude))) {
 					attrs = alias;
 					alias = joinTableName;
 					opt = undefined;
@@ -170,8 +170,8 @@ class QueryBuilder {
 
 				// _join('joinTableName', 'alias', {}) - joinTableName different from alias and attrs is an object
 				if (isObject(attrs)) {
-					if ((attrs['include'] && Array.isArray(attrs.include)) ||
-						(attrs['exclude'] && Array.isArray(attrs.exclude))) {
+					if ((attrs.include && Array.isArray(attrs.include)) ||
+						(attrs.exclude && Array.isArray(attrs.exclude))) {
 						opt = undefined;
 
 						// _join('joinTableName', 'alias', {} || Function) - joinTableName different from alias, select all attributes and execute options
@@ -191,6 +191,25 @@ class QueryBuilder {
 				alias = joinTableName;
 			}
 		}
+
+		return {
+			joinType,
+			joinTableName,
+			alias,
+			attrs,
+			opt
+		};
+	}
+
+	_$join() {
+
+		let {
+			joinType,
+			joinTableName,
+			alias,
+			attrs,
+			opt
+		} = this._parseJoinArguments.apply(this, arguments);
 
 
 		const joinTable = this.constructor._models[joinTableName],
@@ -255,11 +274,11 @@ class QueryBuilder {
 				let orQuery = null;
 				if ('$or' in opt) {
 					orQuery = Object.assign({}, opt.$or);
-					delete opt.$or
+					delete opt.$or;
 				}
 
 				Object.keys(opt).forEach(key => {
-					join.on(knex.raw(`"${joinTableAlias}"."${key}"`), '=', opt[key])
+					join.on(knex.raw(`"${joinTableAlias}"."${key}"`), '=', opt[key]);
 				});
 
 				if (orQuery !== null) {
@@ -273,7 +292,7 @@ class QueryBuilder {
 								fn = 'on';
 							}
 
-							this[fn](knex.raw(`"${joinTableAlias}"."${orKeys[i]}"`), '=', orQuery[orKeys[i]])
+							this[fn](knex.raw(`"${joinTableAlias}"."${orKeys[i]}"`), '=', orQuery[orKeys[i]]);
 						}
 					});
 				}
@@ -294,4 +313,4 @@ class QueryBuilder {
 	}
 }
 
-module.exports = QueryBuilder;
+export default QueryBuilder;

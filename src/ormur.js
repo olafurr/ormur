@@ -1,8 +1,7 @@
 'use strict';
 
-const utils = require('./utils');
-const QueryBuilder = require('./queryBuilder');
-const relationTypes = require('./relationTypes');
+import QueryBuilder from './queryBuilder';
+import relationTypes from './relationTypes';
 
 module.exports = knex => {
 

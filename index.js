@@ -1,1 +1,1 @@
-module.exports = require('./src/ormur');
+module.exports = require('./lib/ormur');
