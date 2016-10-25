@@ -11,6 +11,7 @@
   "author": "Ólafur Ragnar Garðarsson <olafurlax@gmail.com>",
   "license": "ISC",
   "dependencies": {
+    "dottie": "^1.1.1",
     "knex": "^0.12.6",
     "lodash": "^4.16.4"
   },

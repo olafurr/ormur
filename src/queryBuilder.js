@@ -1,10 +1,15 @@
 'use strict';
 
 import {
-	isObject
+	isObject,
+	compactObject
 } from './utils';
 
 import relationTypes from './relationTypes';
+
+import {
+	transform
+} from 'dottie';
 
 class QueryBuilder {
 
@@ -21,11 +26,12 @@ class QueryBuilder {
 		this.tableName = table;
 		this.tableAlias = tableAlias;
 		this.parentTable = parentTable || null;
-
+		this.pagination = null;
+		this.__limit = 0;
 		const self = this;
 
 		// Assign knex methods to the query builder
-		['where', 'orderBy', 'limit', 'then', 'map'].forEach(fn => {
+		['where', 'orderBy', 'then', 'map'].forEach(fn => {
 			this[fn] = function() {
 				self.query = self.query[fn].apply(self.query, arguments);
 				return self;
@@ -77,6 +83,11 @@ class QueryBuilder {
 		const alias = this.tableAlias;
 		const subQuery = fn.call(this.constructor._models[this.tableName].$as(alias));
 
+		if (typeof subQuery.query._single.limit !== 'undefined' && this.pagination) {
+			this.__limit = subQuery.query._single.limit + 1;
+			subQuery.limit(this.__limit);
+		}
+
 		this.query.select(`${this.tableAlias}.*`);
 
 		this.query.from(subQuery.query.clone().as(this.tableAlias)).as('ignored_alias');
@@ -86,6 +97,88 @@ class QueryBuilder {
 
 	$where(column, operator, value) {
 		this.where([this.alias, column].join('.'), operator, value);
+		return this;
+	}
+
+	$paginate(column) {
+		this.pagination = {
+			column: column || 'id'
+		};
+
+		return this;
+	}
+
+	$toJSON() {
+		this.query = this.query.map(row => compactObject(transform(row)));
+		return this;
+	}
+
+	_constructPaginationObject(rows) {
+
+		let result = rows || [];
+		let paginationObj = null;
+		if (!this.pagination || this.__limit === 0) {
+			return {
+				result,
+				paginationObj
+			};
+		}
+
+		const paginationColumn = this.pagination.column;
+		let nextId = null;
+
+		if (result.length > this.__limit - 1) {
+			const nextItem = rows[rows.length - 2];
+
+			if (typeof paginationColumn !== 'undefined' && nextItem.hasOwnProperty(paginationColumn)) {
+				nextId = nextItem[paginationColumn];
+			}
+
+			result = rows.slice(0, rows.length - 1);
+		}
+
+		if (nextId) {
+			paginationObj = {
+				nextId: nextId
+			};
+		}
+
+		return {
+			result,
+			paginationObj
+		};
+	}
+
+	$spread() {
+		return this.spread.apply(this, arguments);
+	}
+
+	spread(cb) {
+
+		const self = this;
+		return this.query.then(function(rows) {
+			let {
+				result,
+				paginationObj
+			} = self._constructPaginationObject(rows);
+
+			return cb(result, paginationObj);
+		});
+	}
+
+	$limit() {
+		return this.limit.apply(this, arguments);
+	}
+
+	limit(count) {
+		let limit = count;
+		if (this.pagination) {
+			limit += 1;
+		}
+
+		this.query.limit(limit);
+		this.__limit = limit;
+
 		return this;
 	}
 
