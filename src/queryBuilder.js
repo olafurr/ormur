@@ -206,9 +206,13 @@ class QueryBuilder {
 		return this._$join('innerJoin', table, alias, attrs, opt);
 	}
 
-	_parseJoinArguments(joinType, joinTableName, alias, attrs, opt) {
+	_parseJoinArguments(joinType, joinTableName, alias, attrs, opt, optFn) {
 		const args = Array.prototype.slice.call(arguments);
-		const argCount = args.filter(a => typeof a !== 'undefined').length;
+		let argCount = args.filter(a => typeof a !== 'undefined').length;
+
+		// if (argCount === 6) {
+		// 	argCount = 4;
+		// }
 
 		if (argCount < 2) {
 			throw new Error('joinTableName and joinType must be specied for the join');
@@ -288,12 +292,18 @@ class QueryBuilder {
 			}
 		}
 
+		let _optFn = null;
+		if (typeof args[argCount - 1] === 'function') {
+			_optFn = args[argCount - 1];
+		}
+
 		return {
 			joinType,
 			joinTableName,
 			alias,
 			attrs,
-			opt
+			opt,
+			optFn: _optFn
 		};
 	}
 
@@ -304,7 +314,8 @@ class QueryBuilder {
 			joinTableName,
 			alias,
 			attrs,
-			opt
+			opt,
+			optFn
 		} = this._parseJoinArguments.apply(this, arguments);
 
 
@@ -397,8 +408,10 @@ class QueryBuilder {
 			return join;
 		});
 
-		if (typeof opt === 'function') {
-			opt.call(new QueryBuilder(this.query, joinTableName, alias, joinTableAlias));
+		const _optFn = typeof opt === 'function' ? opt : optFn;
+
+		if (typeof _optFn === 'function') {
+			_optFn.call(new QueryBuilder(this.query, joinTableName, alias, joinTableAlias));
 		}
 
 		return this;

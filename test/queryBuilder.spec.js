@@ -173,6 +173,7 @@ describe('Test QueryBuilder', () => {
                 expect(args.alias).to.equal('users');
                 expect(args.attrs).to.equal(attrs);
                 expect(args.opt).to.equal(opt);
+                expect(args.optFn).to.equal(opt);
             });
 
             it('should parse correctly with alias omitted, attributes as an object and opt an object', () => {
@@ -191,6 +192,7 @@ describe('Test QueryBuilder', () => {
                 expect(args.alias).to.equal('users');
                 expect(args.attrs).to.equal(attrs);
                 expect(args.opt).to.equal(opt);
+                expect(args.optFn).to.equal(null);
             });
 
             it('should parse correctly with alias omitted, attributes as an object and opt a function', () => {
@@ -207,7 +209,35 @@ describe('Test QueryBuilder', () => {
                 expect(args.alias).to.equal('users');
                 expect(args.attrs).to.equal(attrs);
                 expect(args.opt).to.equal(opt);
+                expect(args.optFn).to.equal(opt);
             });
         });
+
+        describe.only('Four arguments', () => {
+            it('should parse correctly with alias omitted, attributes as an object and opt an object', () => {
+                const opt = {
+                    username: 'jack'
+                };
+
+                const optFn = function() {};
+
+                const attrs = {
+                    include: ['id']
+                };
+
+                const args = queryBuilder._parseJoinArguments('leftJoin', 'users', 'user', attrs, opt, optFn);
+
+                expect(args.joinType).to.equal('leftJoin');
+                expect(args.joinTableName).to.equal('users');
+                expect(args.alias).to.equal('user');
+                expect(args.attrs).to.equal(attrs);
+                expect(args.opt).to.equal(opt);
+                expect(args.optFn).to.equal(optFn);
+            });
+
+
+        });
+
     });
+
 });
