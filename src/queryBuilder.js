@@ -31,7 +31,7 @@ class QueryBuilder {
 		const self = this;
 
 		// Assign knex methods to the query builder
-		['where', 'orderBy', 'toSQL', 'orderByRaw', 'then', 'tap', 'catch', 'map', 'groupBy', 'gropuByRaw', 'whereRaw', 'whereNot', 'whereIn', 'whereNotIn', 'whereNull', 'whereNotNull', 'whereExists', 'whereNotExists', 'whereBetween', 'whereNotBetween'].forEach(fn => {
+		['where', 'orderBy', 'select', 'toSQL', 'orderByRaw', 'then', 'tap', 'catch', 'map', 'groupBy', 'gropuByRaw', 'whereRaw', 'whereNot', 'whereIn', 'whereNotIn', 'whereNull', 'whereNotNull', 'whereExists', 'whereNotExists', 'whereBetween', 'whereNotBetween'].forEach(fn => {
 			this[fn] = function() {
 				self.query = self.query[fn].apply(self.query, arguments);
 				return self;
@@ -71,6 +71,10 @@ class QueryBuilder {
 		});
 	}
 
+	$selectRaw(str) {
+		this.query = this.query.select(this.constructor.knex.raw(str));
+		return this;
+	}
 
 	/**
 	 * Execute a subquery for the current query

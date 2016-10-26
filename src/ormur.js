@@ -147,7 +147,7 @@ module.exports = knex => {
 	}
 
 	BaseModel.relations = {};
-	QueryBuilder.knex = knex;
+	BaseModel.knex = QueryBuilder.knex = knex;
 
 	var models;
 	QueryBuilder._models = BaseModel._models = models = {};
