@@ -95,7 +95,7 @@ class QueryBuilder {
 	}
 
 	$where(column, operator, value) {
-		this.where([this.alias, column].join('.'), operator, value);
+		this.where([this.tableAlias, column].join('.'), operator, value);
 		return this;
 	}
 
