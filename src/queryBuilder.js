@@ -31,7 +31,7 @@ class QueryBuilder {
 		const self = this;
 
 		// Assign knex methods to the query builder
-		['where', 'orderBy', 'then', 'map'].forEach(fn => {
+		['where', 'orderBy', 'toSQL', 'orderByRaw', 'then', 'map', 'groupBy', 'gropuByRaw', 'whereRaw', 'whereNot', 'whereIn', 'whereNotIn', 'whereNull', 'whereNotNull', 'whereExists', 'whereNotExists', 'whereBetween', 'whereNotBetween'].forEach(fn => {
 			this[fn] = function() {
 				self.query = self.query[fn].apply(self.query, arguments);
 				return self;
@@ -67,7 +67,6 @@ class QueryBuilder {
 				rightHand = isTopLevel ? columnAliases[c] || c : [alias, columnAliases[c] || c].join('.');
 			}
 
-
 			return raw(`${leftHand} as "${rightHand}"`);
 		});
 	}
@@ -96,7 +95,7 @@ class QueryBuilder {
 	}
 
 	$where(column, operator, value) {
-		this.where([this.alias, column].join('.'), operator, value);
+		this.where([this.tableAlias, column].join('.'), operator, value);
 		return this;
 	}
 
