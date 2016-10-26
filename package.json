@@ -1,6 +1,6 @@
 {
   "name": "gormur",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Very lightweight orm for javascript built on top of knex",
   "main": "index.js",
   "scripts": {
