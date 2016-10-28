@@ -125,7 +125,9 @@ module.exports = knex => {
 				const obj = args[0];
 				if ('include' in obj) {
 					selectColumns = columns.concat(obj.include);
-				} else if ('exclude' in obj) {
+				}
+
+				if ('exclude' in obj) {
 					selectColumns = columns.filter(c => {
 						return obj.exclude.indexOf(c) === -1;
 					});
